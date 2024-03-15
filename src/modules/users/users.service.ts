@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { hashPassword } from '../../helpers';
 import { Users } from './models/user.model';
@@ -14,57 +14,103 @@ export class UsersService {
     @InjectModel(Users)
     private readonly usersModel: typeof Users,
     private readonly tokenService: TokenService,
+    private readonly logger: Logger,
   ) {}
 
   public async create(
     createUserDto: CreateUserDto,
   ): Promise<UserCreateResponse> {
-    const userExist: Users = await this.usersModel.findOne({
-      where: { email: createUserDto.email },
-    });
-    if (userExist) throw new BadRequestException(AppErrors.USER_EXISTS);
+    try {
+      const userExist: Users = await this.usersModel.findOne({
+        where: { email: createUserDto.email },
+      });
+      if (userExist) throw new BadRequestException(AppErrors.USER_EXISTS);
 
-    createUserDto.password = await hashPassword(createUserDto.password);
-    const user: Users = await this.usersModel.create(createUserDto);
+      createUserDto.password = await hashPassword(createUserDto.password);
+      const user: Users = await this.usersModel.create(createUserDto);
 
-    const token: string = await this.tokenService.generateJwtToken({
-      id: user.id,
-      email: user.email,
-    });
+      const token: string = await this.tokenService.generateJwtToken({
+        id: user.id,
+        email: user.email,
+      });
 
-    delete user.dataValues.password;
-    return { ...user.dataValues, token } as UserCreateResponse;
+      delete user.dataValues.password;
+
+      this.logger.log(user.dataValues, 'Create user successful');
+
+      return { ...user.dataValues, token } as UserCreateResponse;
+    } catch (e) {
+      this.logger.error(
+        e.response.message,
+        'User service, create method error',
+      );
+      return e;
+    }
   }
 
   public findAll(): Promise<Users[]> {
-    return this.usersModel.findAll({
-      attributes: {
-        exclude: ['password'],
-      },
-    });
+    try {
+      return this.usersModel.findAll({
+        attributes: {
+          exclude: ['password'],
+        },
+      });
+    } catch (e) {
+      this.logger.error(
+        e.response.message,
+        'User service findAll method error',
+      );
+      return e;
+    }
   }
 
   public findOne(id: number): Promise<Users> {
-    return this.usersModel.findOne({ where: { id } });
+    try {
+      return this.usersModel.findOne({ where: { id } });
+    } catch (e) {
+      this.logger.error(
+        e.response.message,
+        'User service findOne method error',
+      );
+      return e;
+    }
   }
 
   public findOneByEmail(email: string): Promise<Users> {
-    return this.usersModel.findOne({ where: { email } });
+    try {
+      return this.usersModel.findOne({ where: { email } });
+    } catch (e) {
+      this.logger.error(
+        e.response.message,
+        'User service findOneByEmail method error',
+      );
+      return e;
+    }
   }
 
   public async update(
     id: number,
     updateUserDto: UpdateUserDto,
   ): Promise<Users> {
-    await this.usersModel.update(updateUserDto, { where: { id } });
+    try {
+      await this.usersModel.update(updateUserDto, { where: { id } });
 
-    const user: Users = await this.findOne(id);
-    delete user.dataValues.password;
+      const user: Users = await this.findOne(id);
+      delete user.dataValues.password;
 
-    return user;
+      return user;
+    } catch (e) {
+      this.logger.error(e.response.message, 'User service update method error');
+      return e;
+    }
   }
 
   public remove(id: number): Promise<number> {
-    return this.usersModel.destroy({ where: { id } });
+    try {
+      return this.usersModel.destroy({ where: { id } });
+    } catch (e) {
+      this.logger.error(e.response.message, 'User service remove method error');
+      return e;
+    }
   }
 }
