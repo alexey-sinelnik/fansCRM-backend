@@ -22,15 +22,18 @@ export class UsersService {
     const userExist: Users = await this.usersModel.findOne({
       where: { email: createUserDto.email },
     });
-
     if (userExist) throw new BadRequestException(AppErrors.USER_EXISTS);
+
     createUserDto.password = await hashPassword(createUserDto.password);
     const user: Users = await this.usersModel.create(createUserDto);
+
     const token: string = await this.tokenService.generateJwtToken({
       id: user.id,
       email: user.email,
     });
-    return { ...user, token } as UserCreateResponse;
+
+    delete user.dataValues.password;
+    return { ...user.dataValues, token } as UserCreateResponse;
   }
 
   public findAll(): Promise<Users[]> {
@@ -54,7 +57,11 @@ export class UsersService {
     updateUserDto: UpdateUserDto,
   ): Promise<Users> {
     await this.usersModel.update(updateUserDto, { where: { id } });
-    return this.findOne(id);
+
+    const user: Users = await this.findOne(id);
+    delete user.dataValues.password;
+
+    return user;
   }
 
   public remove(id: number): Promise<number> {

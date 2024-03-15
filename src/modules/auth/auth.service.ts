@@ -22,14 +22,12 @@ export class AuthService {
     const user: Users = await this.usersService.findOneByEmail(
       loginUserDto.email,
     );
-
     if (!user) throw new BadRequestException(AppErrors.USER_NOT_EXIST);
 
     const compareUserPassword: boolean = await comparePassword(
       loginUserDto.password,
       user.password,
     );
-
     if (!compareUserPassword)
       throw new BadRequestException(AppErrors.PASSWORD_NOT_VALID);
 
@@ -38,6 +36,8 @@ export class AuthService {
       email: user.email,
     });
 
-    return { ...user, token } as UserCreateResponse;
+    delete user.dataValues.password;
+
+    return { ...user.dataValues, token } as UserCreateResponse;
   }
 }
