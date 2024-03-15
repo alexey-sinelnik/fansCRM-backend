@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Logger, Module } from '@nestjs/common';
 import { TokenService } from './token.service';
 import { PassportModule } from '@nestjs/passport';
 import { JwtStrategy } from '../../starategy';
@@ -22,7 +22,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
     }),
     ConfigModule,
   ],
-  providers: [TokenService, JwtStrategy],
+  providers: [TokenService, JwtStrategy, Logger],
   exports: [TokenService],
 })
 export class TokenModule {}

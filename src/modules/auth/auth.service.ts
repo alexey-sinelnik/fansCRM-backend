@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { UsersService } from '../users/users.service';
 import { TokenService } from '../token/token.service';
 import { comparePassword } from '../../helpers';
@@ -13,31 +13,45 @@ export class AuthService {
   constructor(
     private readonly usersService: UsersService,
     private readonly tokenService: TokenService,
+    private readonly logger: Logger,
   ) {}
   public register(createAuthDto: CreateUserDto): Promise<UserCreateResponse> {
-    return this.usersService.create(createAuthDto);
+    try {
+      return this.usersService.create(createAuthDto);
+    } catch (e) {
+      this.logger.error(
+        e.response.message,
+        'Auth service, register method error',
+      );
+      return e;
+    }
   }
 
   public async login(loginUserDto: LoginAuthDto): Promise<UserCreateResponse> {
-    const user: Users = await this.usersService.findOneByEmail(
-      loginUserDto.email,
-    );
-    if (!user) throw new BadRequestException(AppErrors.USER_NOT_EXIST);
+    try {
+      const user: Users = await this.usersService.findOneByEmail(
+        loginUserDto.email,
+      );
+      if (!user) throw new BadRequestException(AppErrors.USER_NOT_EXIST);
 
-    const compareUserPassword: boolean = await comparePassword(
-      loginUserDto.password,
-      user.password,
-    );
-    if (!compareUserPassword)
-      throw new BadRequestException(AppErrors.PASSWORD_NOT_VALID);
+      const compareUserPassword: boolean = await comparePassword(
+        loginUserDto.password,
+        user.password,
+      );
+      if (!compareUserPassword)
+        throw new BadRequestException(AppErrors.PASSWORD_NOT_VALID);
 
-    const token: string = await this.tokenService.generateJwtToken({
-      id: user.id,
-      email: user.email,
-    });
+      const token: string = await this.tokenService.generateJwtToken({
+        id: user.id,
+        email: user.email,
+      });
 
-    delete user.dataValues.password;
+      delete user.dataValues.password;
 
-    return { ...user.dataValues, token } as UserCreateResponse;
+      return { ...user.dataValues, token } as UserCreateResponse;
+    } catch (e) {
+      this.logger.error(e.response.message, 'Auth service, login method error');
+      return e;
+    }
   }
 }
