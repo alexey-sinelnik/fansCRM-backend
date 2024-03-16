@@ -48,13 +48,15 @@ export class UsersService {
     }
   }
 
-  public findAll(): Promise<Users[]> {
+  public async findAll(): Promise<Users[]> {
     try {
-      return this.usersModel.findAll({
+      const users = await this.usersModel.findAll({
         attributes: {
           exclude: ['password'],
         },
       });
+      console.log(users);
+      return users;
     } catch (e) {
       this.logger.error(
         e.response.message,
